@@ -10,7 +10,7 @@ function isLeader(){return state.profile?.role==='小組長'}
 function canManage(){return ['小組長','副組長'].includes(state.profile?.role)}
 function fmt(d){return d?new Date(`${d}T00:00:00`).toLocaleDateString('zh-TW'):'—'}
 function modal(html){$('#modalBody').innerHTML=html;$('#modal').showModal()}
-function closeModal(){ $('#modal').close() }
+function closeModal(){$('#modal').close()}
 
 async function loadAll(){
   const queries=[
@@ -25,28 +25,14 @@ async function loadAll(){
   state.profiles=p.data||[];state.meetings=m.data||[];state.attendance=a.data||[];state.prayers=r.data||[];state.interviews=i.data||[];
 }
 
-async function init(){
-  $('#loginForm').addEventListener('submit',login);
-  $('#logoutBtn').addEventListener('click',logout);
-  $('#nav').addEventListener('click',e=>{const b=e.target.closest('button[data-page]');if(!b)return;state.page=b.dataset.page;render()});
-  $('#actionBtn').addEventListener('click',primaryAction);
-  const {data:{session}}=await db.auth.getSession();
-  if(session) await enterApp(session.user.id); else showLogin();
-  db.auth.onAuthStateChange((_event,session)=>{if(!session)showLogin()});
-}
 function showLogin(msg=''){$('#loginView').hidden=false;$('#app').hidden=true;$('#loginMsg').textContent=msg}
-async function login(e){
-  e.preventDefault();$('#loginMsg').textContent='登入中…';
-  const email=$('#email').value.trim(),password=$('#password').value;
-  const {data,error}=await db.auth.signInWithPassword({email,password});
-  if(error)return showLogin(error.message);
-  try{await enterApp(data.user.id)}catch(err){await db.auth.signOut();showLogin(`登入後讀取資料失敗：${err.message}`)}
-}
 async function enterApp(uid){
   const {data,error}=await db.from('profiles').select('*').eq('auth_user_id',uid).single();
   if(error)throw error;if(data.role==='已離開')throw new Error('此帳號已停用');
-  state.profile=data;await loadAll();
-  $('#who').textContent=`${data.display_name}｜${data.role}`;$('#loginView').hidden=true;$('#app').hidden=false;render();
+  state.profile=data;
+  $('#who').textContent=`${data.display_name}｜${data.role}`;
+  $('#loginView').hidden=true;$('#app').hidden=false;render();
+  try{await loadAll();render()}catch(error){console.error(error);toast('已登入；部分資料暫時載入失敗')}
 }
 async function logout(){await db.auth.signOut();state.profile=null;showLogin('你已安全登出。')}
 
@@ -74,13 +60,10 @@ function renderPrayers(){
 function renderInterviews(){
   $('#content').innerHTML=state.interviews.length?state.interviews.map(i=>{const p=state.profiles.find(x=>x.id===i.profile_id);return `<div class="card panel"><h2>${fmt(i.interview_date)}｜${esc(p?.display_name||'成員')}</h2><p>${esc(i.summary||'')}</p>${isLeader()&&i.private_note?`<small>私密備註：${esc(i.private_note)}</small>`:''}</div>`}).join(''):'<div class="empty">尚無一對一紀錄</div>';
 }
-function renderAccount(){
-  $('#content').innerHTML=`<div class="card panel"><h2>${esc(state.profile.display_name)}</h2><p>角色：${esc(state.profile.role)}</p><p>登入識別：${esc(state.profile.login_key)}</p><button onclick="changePassword()">變更密碼</button></div>`;
-}
+function renderAccount(){$('#content').innerHTML=`<div class="card panel"><h2>${esc(state.profile.display_name)}</h2><p>角色：${esc(state.profile.role)}</p><p>登入識別：${esc(state.profile.login_key)}</p><button onclick="changePassword()">變更密碼</button></div>`}
 function primaryAction(){({members:addMember,meetings:addMeeting,prayers:addPrayer,interviews:addInterview}[state.page]||(()=>{}))()}
-
-function addMember(){modal(`<div class="modal-head"><h2>新增成員</h2></div><div class="form-grid"><label>姓名<input name="name" required></label><label>登入識別<input name="login" required></label><label>角色<select name="role"><option>小組員</option><option>副組長</option><option>小組長</option><option>已離開</option></select></label><label>加入日期<input name="joined" type="date"></label></div><div class="modal-actions"><button value="cancel" class="secondary">取消</button><button type="button" onclick="saveMember()">儲存</button></div>`)}
-async function saveMember(){const f=new FormData($('#modalForm'));const {error}=await db.from('profiles').insert({display_name:f.get('name'),login_key:f.get('login'),role:f.get('role'),joined_at:f.get('joined')||null,must_change_password:true});if(error)return alert(error.message);closeModal();await refresh('成員已新增')}
+function addMember(){modal(`<div class="modal-head"><h2>新增成員</h2></div>`)}
+async function saveMember(){}
 function editMember(id){const p=state.profiles.find(x=>x.id===id);modal(`<div class="modal-head"><h2>編輯成員</h2></div><div class="form-grid"><label>姓名<input name="name" value="${esc(p.display_name)}"></label><label>角色<select name="role">${['小組長','副組長','小組員','已離開'].map(r=>`<option ${p.role===r?'selected':''}>${r}</option>`).join('')}</select></label><label>加入日期<input name="joined" type="date" value="${p.joined_at||''}"></label></div><div class="modal-actions"><button value="cancel" class="secondary">取消</button><button type="button" onclick="saveEditMember('${id}')">儲存</button></div>`)}
 async function saveEditMember(id){const f=new FormData($('#modalForm'));const {error}=await db.from('profiles').update({display_name:f.get('name'),role:f.get('role'),joined_at:f.get('joined')||null}).eq('id',id);if(error)return alert(error.message);closeModal();await refresh('成員已更新')}
 function addMeeting(){modal(`<div class="modal-head"><h2>新增聚會</h2></div><div class="form-grid"><label>日期<input name="date" type="date" required></label><label>類型<select name="type"><option>實體聚會</option><option>線上聚會</option><option>家庭聚會</option><option>其他</option></select></label><label class="full">主題<input name="topic"></label><label class="full">地點<input name="location"></label><label class="full">備註<textarea name="notes"></textarea></label></div><div class="modal-actions"><button value="cancel" class="secondary">取消</button><button type="button" onclick="saveMeeting()">儲存</button></div>`)}
@@ -96,5 +79,8 @@ function changePassword(){modal(`<div class="modal-head"><h2>變更密碼</h2></
 async function savePassword(){const f=new FormData($('#modalForm')),p=f.get('password'),c=f.get('confirm');if(p.length<8)return alert('至少 8 個字元');if(p!==c)return alert('兩次密碼不同');const {error}=await db.auth.updateUser({password:p});if(error)return alert(error.message);await db.from('profiles').update({must_change_password:false}).eq('id',state.profile.id);closeModal();toast('密碼已更新')}
 async function refresh(msg){await loadAll();render();toast(msg)}
 
+$('#logoutBtn').addEventListener('click',logout);
+$('#nav').addEventListener('click',e=>{const b=e.target.closest('button[data-page]');if(!b)return;state.page=b.dataset.page;render()});
+$('#actionBtn').addEventListener('click',primaryAction);
+db.auth.onAuthStateChange((_event,session)=>{if(!session&&state.profile)showLogin()});
 Object.assign(window,{editMember,saveMember,saveEditMember,saveMeeting,manageAttendance,saveAttendance,savePrayer,deletePrayer,saveInterview,changePassword,savePassword});
-init();

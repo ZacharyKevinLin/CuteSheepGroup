@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#325d4b">
+  <title>羊咩咩小組｜雲端登入測試</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="shell">
+    <section class="card">
+      <div class="brand"><span>🐑</span><div><h1>羊咩咩小組</h1><p>Supabase 雲端登入測試</p></div></div>
+
+      <form id="loginForm">
+        <label>登入 Email
+          <input id="email" type="email" autocomplete="username" required placeholder="你在 Supabase 建立帳號時填的 Email">
+        </label>
+        <label>密碼
+          <input id="password" type="password" autocomplete="current-password" required minlength="6">
+        </label>
+        <button type="submit">登入</button>
+      </form>
+
+      <p id="message" class="message" aria-live="polite"></p>
+
+      <section id="account" hidden>
+        <h2>登入成功</h2>
+        <dl>
+          <div><dt>名稱</dt><dd id="displayName">—</dd></div>
+          <div><dt>角色</dt><dd id="role">—</dd></div>
+          <div><dt>登入識別</dt><dd id="loginKey">—</dd></div>
+          <div><dt>首次改密碼</dt><dd id="mustChange">—</dd></div>
+        </dl>
+        <button id="logoutButton" class="secondary" type="button">登出</button>
+      </section>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script src="cloud-auth.js"></script>
+</body>
+</html>

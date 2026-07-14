@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#315f4d">
   <title>羊咩咩小組管理</title>
-  <link rel="stylesheet" href="styles.css?v=6">
+  <link rel="stylesheet" href="styles.css?v=7">
 </head>
 <body>
   <section id="loginView" class="center-screen">
@@ -17,7 +17,7 @@
       <label>密碼<input id="password" type="password" autocomplete="current-password" required placeholder="請輸入密碼"></label>
       <button type="submit">登入</button>
       <p class="login-help">請選擇自己的名字，再輸入密碼。</p>
-      <p id="loginMsg" class="msg"></p>
+      <p id="loginMsg" class="msg">程式載入中…</p>
     </form>
   </section>
 
@@ -43,8 +43,24 @@
   <dialog id="modal"><form method="dialog" id="modalForm"><div id="modalBody"></div></form></dialog>
   <div id="toast" class="toast"></div>
 
+  <script>
+    window.addEventListener('error', function (event) {
+      var box = document.getElementById('loginMsg');
+      if (box) box.textContent = '程式錯誤：' + (event.message || '未知錯誤');
+    });
+    window.addEventListener('unhandledrejection', function (event) {
+      var box = document.getElementById('loginMsg');
+      var reason = event.reason && event.reason.message ? event.reason.message : String(event.reason || '未知錯誤');
+      if (box) box.textContent = '連線錯誤：' + reason;
+    });
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js?v=1"></script>
-  <script src="main.js?v=1"></script>
+  <script>
+    if (!window.supabase) {
+      document.write('<script src="https://unpkg.com/@supabase/supabase-js@2"><\/script>');
+    }
+  </script>
+  <script src="config.js?v=2"></script>
+  <script src="main.js?v=2"></script>
 </body>
 </html>

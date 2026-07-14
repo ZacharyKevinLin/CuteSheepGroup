@@ -1,11 +1,11 @@
 const loginSelect=document.querySelector('#loginMember');
 
 function setLoginOptions(rows){
-  loginSelect.innerHTML='<option value="" selected disabled>請選擇成員</option>'+rows.map(m=>`<option value="${esc(m.login_key)}">${esc(m.display_name)}</option>`).join('');
+  loginSelect.innerHTML='<option value="" disabled>請選擇成員</option>'+rows.map(m=>`<option value="${esc(m.login_key)}">${esc(m.display_name)}</option>`).join('');
+  if(rows.length) loginSelect.value=rows[0].login_key;
 }
 
 async function loadLoginMembersV2(){
-  loginSelect.innerHTML='<option value="" selected disabled>載入成員中…</option>';
   try{
     const request=db.rpc('list_login_members');
     const timeout=new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout')),4000));
@@ -21,23 +21,30 @@ async function loadLoginMembersV2(){
   }
 }
 
+function emailForLoginKey(loginKey){
+  if(loginKey==='zachary') return 'rockkevin654@gmail.com';
+  return `${loginKey}@cutesheep.local`;
+}
+
 async function loginByMember(e){
   e.preventDefault();
-  document.querySelector('#loginMsg').textContent='登入中…';
+  const msg=document.querySelector('#loginMsg');
+  msg.textContent='登入中…';
   const loginKey=loginSelect.value;
   const password=document.querySelector('#password').value;
   if(!loginKey)return showLogin('請先選擇成員。');
-  const {data:email,error:resolveError}=await db.rpc('resolve_login_email',{p_login_key:loginKey});
-  if(resolveError)return showLogin(`無法取得登入資料：${resolveError.message}`);
-  if(!email)return showLogin('此成員尚未建立登入帳號，請聯絡小組長。');
-  const {data,error}=await db.auth.signInWithPassword({email,password});
-  if(error)return showLogin('密碼錯誤，請重新輸入。');
+
+  const email=emailForLoginKey(loginKey);
   try{
+    const loginRequest=db.auth.signInWithPassword({email,password});
+    const timeout=new Promise((_,reject)=>setTimeout(()=>reject(new Error('登入逾時，請檢查網路後重試。')),10000));
+    const {data,error}=await Promise.race([loginRequest,timeout]);
+    if(error)return showLogin('密碼錯誤，請重新輸入。');
     document.querySelector('#password').value='';
     await enterApp(data.user.id);
   }catch(err){
-    await db.auth.signOut();
-    showLogin(`登入後讀取資料失敗：${err.message}`);
+    await db.auth.signOut().catch(()=>{});
+    showLogin(err?.message||'登入失敗，請稍後再試。');
   }
 }
 

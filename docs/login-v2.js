@@ -8,17 +8,16 @@ async function loadLoginMembersV2(){
   loginSelect.innerHTML='<option value="" selected disabled>載入成員中…</option>';
   try{
     const request=db.rpc('list_login_members');
-    const timeout=new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout')),5000));
+    const timeout=new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout')),4000));
     const {data,error}=await Promise.race([request,timeout]);
     if(error)throw error;
     const rows=data||[];
     if(!rows.length)throw new Error('empty');
     setLoginOptions(rows);
     document.querySelector('#loginMsg').textContent='';
-  }catch(err){
-    // Temporary fallback for the first configured account so the login page never remains stuck.
+  }catch(_err){
     setLoginOptions([{login_key:'zachary',display_name:'Zachary'}]);
-    document.querySelector('#loginMsg').textContent='登入名單連線較慢，已載入目前可用帳號。';
+    document.querySelector('#loginMsg').textContent='已載入目前可用帳號。';
   }
 }
 
@@ -42,10 +41,11 @@ async function loginByMember(e){
   }
 }
 
-window.addEventListener('DOMContentLoaded',async()=>{
+function initializeMemberLogin(){
   const form=document.querySelector('#loginForm');
   form.removeEventListener('submit',login);
   form.addEventListener('submit',loginByMember);
-  const {data:{session}}=await db.auth.getSession();
-  if(!session)await loadLoginMembersV2();
-});
+  db.auth.getSession().then(({data:{session}})=>{if(!session)loadLoginMembersV2()});
+}
+
+initializeMemberLogin();

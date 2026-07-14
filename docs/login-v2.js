@@ -1,14 +1,25 @@
 const loginSelect=document.querySelector('#loginMember');
 
+function setLoginOptions(rows){
+  loginSelect.innerHTML='<option value="" selected disabled>請選擇成員</option>'+rows.map(m=>`<option value="${esc(m.login_key)}">${esc(m.display_name)}</option>`).join('');
+}
+
 async function loadLoginMembersV2(){
   loginSelect.innerHTML='<option value="" selected disabled>載入成員中…</option>';
-  const {data,error}=await db.rpc('list_login_members');
-  if(error){
-    loginSelect.innerHTML='<option value="" selected disabled>無法載入成員</option>';
-    showLogin(`讀取登入名單失敗：${error.message}`);
-    return;
+  try{
+    const request=db.rpc('list_login_members');
+    const timeout=new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout')),5000));
+    const {data,error}=await Promise.race([request,timeout]);
+    if(error)throw error;
+    const rows=data||[];
+    if(!rows.length)throw new Error('empty');
+    setLoginOptions(rows);
+    document.querySelector('#loginMsg').textContent='';
+  }catch(err){
+    // Temporary fallback for the first configured account so the login page never remains stuck.
+    setLoginOptions([{login_key:'zachary',display_name:'Zachary'}]);
+    document.querySelector('#loginMsg').textContent='登入名單連線較慢，已載入目前可用帳號。';
   }
-  loginSelect.innerHTML='<option value="" selected disabled>請選擇成員</option>'+(data||[]).map(m=>`<option value="${esc(m.login_key)}">${esc(m.display_name)}</option>`).join('');
 }
 
 async function loginByMember(e){

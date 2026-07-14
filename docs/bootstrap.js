@@ -22,9 +22,7 @@ async function loadLoginDirectory() {
       loginSelect.innerHTML = result.data
         .map((member) => `<option value="${esc(member.login_key)}">${esc(member.display_name)}</option>`)
         .join('');
-      if (result.data.some((member) => member.login_key === 'zachary')) {
-        loginSelect.value = 'zachary';
-      }
+      if (result.data.some((member) => member.login_key === 'zachary')) loginSelect.value = 'zachary';
     }
   } catch (error) {
     console.warn('使用備援登入名單', error);
@@ -99,6 +97,65 @@ async function cleanLogout() {
   await loadLoginDirectory();
 }
 
+function openCreateMember() {
+  modal(`<div class="modal-head"><h2>新增成員</h2></div>
+    <div class="form-grid">
+      <label>姓名<input name="displayName" required></label>
+      <label>登入識別<input name="loginKey" required placeholder="例如 peter"></label>
+      <label>生日<input name="birthday" type="date" required></label>
+      <label>角色<select name="role"><option>小組員</option><option>副組長</option><option>小組長</option></select></label>
+      <label>加入日期<input name="joinedAt" type="date"></label>
+    </div>
+    <p class="login-help">建立後自動產生帳號，初始密碼為生日 YYYYMMDD。</p>
+    <div class="modal-actions"><button value="cancel" class="secondary">取消</button><button type="button" id="createMemberBtn">建立成員與帳號</button></div>`);
+  document.querySelector('#createMemberBtn').addEventListener('click', createMemberAccount);
+}
+
+async function createMemberAccount() {
+  const form = new FormData(document.querySelector('#modalForm'));
+  const payload = {
+    displayName: String(form.get('displayName') || '').trim(),
+    loginKey: String(form.get('loginKey') || '').trim().toLowerCase(),
+    birthday: String(form.get('birthday') || ''),
+    role: String(form.get('role') || '小組員'),
+    joinedAt: String(form.get('joinedAt') || '') || null,
+  };
+  if (!payload.displayName || !payload.loginKey || !payload.birthday) {
+    alert('請填寫姓名、登入識別與生日。');
+    return;
+  }
+
+  const button = document.querySelector('#createMemberBtn');
+  button.disabled = true;
+  button.textContent = '建立中…';
+  try {
+    const result = await timeout(
+      db.functions.invoke('create-member', { body: payload }),
+      15000,
+      '建立帳號逾時，請稍後重試。',
+    );
+    if (result.error) throw result.error;
+    if (result.data?.error) throw new Error(result.data.error);
+    closeModal();
+    await loadAll();
+    render();
+    alert(`${payload.displayName} 已建立完成。\n初始密碼：${result.data.temporaryPassword}`);
+  } catch (error) {
+    alert(`建立失敗：${error.message || '未知錯誤'}`);
+  } finally {
+    button.disabled = false;
+    button.textContent = '建立成員與帳號';
+  }
+}
+
+function cleanPrimaryAction() {
+  if (state.page === 'members' && isLeader()) {
+    openCreateMember();
+    return;
+  }
+  primaryAction();
+}
+
 async function cleanInit() {
   document.querySelector('#loginForm').addEventListener('submit', cleanLogin);
   document.querySelector('#logoutBtn').addEventListener('click', cleanLogout);
@@ -108,7 +165,7 @@ async function cleanInit() {
     state.page = button.dataset.page;
     render();
   });
-  document.querySelector('#actionBtn').addEventListener('click', primaryAction);
+  document.querySelector('#actionBtn').addEventListener('click', cleanPrimaryAction);
 
   const sessionResult = await db.auth.getSession();
   if (sessionResult.data.session) {

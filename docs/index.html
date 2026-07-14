@@ -5,15 +5,20 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#315f4d">
   <title>羊咩咩小組管理</title>
-  <link rel="stylesheet" href="styles.css?v=1">
+  <link rel="stylesheet" href="styles.css?v=2">
 </head>
 <body>
   <section id="loginView" class="center-screen">
     <form id="loginForm" class="card login-card">
       <div class="brand-row"><span class="logo">🐑</span><div><h1>羊咩咩小組</h1><p>雲端管理平台</p></div></div>
-      <label>Email<input id="email" type="email" autocomplete="username" required></label>
-      <label>密碼<input id="password" type="password" autocomplete="current-password" required></label>
+      <label>選擇成員
+        <select id="loginMember" required>
+          <option value="" selected disabled>載入成員中…</option>
+        </select>
+      </label>
+      <label>密碼<input id="password" type="password" autocomplete="current-password" required placeholder="請輸入密碼"></label>
       <button type="submit">登入</button>
+      <p class="login-help">請選擇自己的名字，再輸入密碼。</p>
       <p id="loginMsg" class="msg"></p>
     </form>
   </section>
@@ -41,6 +46,6 @@
   <div id="toast" class="toast"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=1"></script>
+  <script src="app.js?v=2"></script>
 </body>
 </html>

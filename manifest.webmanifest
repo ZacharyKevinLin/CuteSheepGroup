@@ -1,0 +1,9 @@
+{
+  "name": "羊咩咩小組管理",
+  "short_name": "小組管理",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f4f6f3",
+  "theme_color": "#325d4b",
+  "icons": []
+}
